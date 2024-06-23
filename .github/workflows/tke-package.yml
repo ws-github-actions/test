@@ -1,0 +1,38 @@
+name: tke-package
+
+on: [push]
+
+env:
+  DOCKER_REGISTRY: laplace-prod.tencentcloudcr.com
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.TCR_DOCKER_USERNAME }}
+          password: ${{ secrets.TCR_DOCKER_PASSWORD }}
+
+      - name: Build Images
+        run: |
+          VERSION=$(echo $GITHUB_REF |sed 's;refs/tags/tke-v;;')
+          echo "--//INFO: version: $VERSION"
+          echo "--//INFO: print config..."
+          docker buildx bake -f package/docker-bake.hcl --print
+          echo "--//INFO: bake image..."
+          docker buildx bake -f package/docker-bake.hcl --progress=plain
+
+# comment
+#1. SECRET VARIABLE
+# - TCR_DOCKER_USERNAME
+# - TCR_DOCKER_PASSWORD
